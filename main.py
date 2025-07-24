@@ -324,7 +324,6 @@ class MAIN:
             self.drawActiveState()
             
             self.eventLoop()
-                    
             pygame.display.flip() # update screen
 
             self.deltaTime = self.clock.tick(FRAMERATE) / 1000 # use delta time for smoothness
@@ -338,4 +337,7 @@ class MAIN:
         quit() # stop the program from running as pygame will throw an error if any calls are made to pygame after quit
    
 if __name__ == "__main__":
-    MAIN()
+    try:
+        MAIN()
+    except Exception as e:
+        print(f"An unexpected error occured\n\nDetails:\n{e}")
