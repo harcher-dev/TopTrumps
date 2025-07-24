@@ -117,6 +117,7 @@ class MAIN:
         self.clock = pygame.time.Clock()
         self.font = pygame.font.Font("Poppins-Bold.ttf", size=20)
         self.largefont = pygame.font.Font("Poppins-Bold.ttf", size=40)
+        self.deltaTime = 0
         self.mouseButtonUp = False
         self.state = "MAINMENU"
         self.turn = 0
@@ -125,6 +126,12 @@ class MAIN:
         self.computerCards = []
         self.awaitingInput = False
         self.backgroundImage = pygame.image.load("gradient.png").convert()
+        self.timer = 0
+        self.playerChosen = False
+        self.playerTurn = True
+        
+        self.animX, self.animY = 0, 0
+        self.animIncreasing = True
         
         self.mainMenu = MENU(self.screen, self.font, Play = lambda: self.changeState("CARDINPUT"), Quit = self.closeGame)
         self.gameOverMenu = MENU(self.screen, self.font, Main_Menu = lambda: self.changeState("MAINMENU"), Play_Again = self.replayGame, Quit = self.closeGame)
@@ -134,11 +141,13 @@ class MAIN:
         self.computerCards = []
         self.turn = 0
         self.state = "CARDINPUT"
+        self.playerChosen = False
+        self.playerTurn = True
     
     def changeState(self, newState):
         self.state = newState
     
-    def drawActiveState(self): # draw UI to window
+    def drawActiveState(self): # draw UI to window and update game logic
         match self.state:
             case "MAINMENU":
                 titleText = self.largefont.render("Top Trumps", True, (255,255,255))
@@ -160,39 +169,16 @@ class MAIN:
                 self.screen.blit(inputText, inputText.get_rect(center = (SCREEN_WIDTH/2, 260)))
                 
             case "GAME":
-                titleText = self.largefont.render("Choose a category", True, (255,255,255))
-                self.screen.blit(titleText, titleText.get_rect(center = (SCREEN_WIDTH/2, 75)))
-                subText = self.largefont.render("Your card:", True, (179,205,224))
+                subText = self.font.render("Your card:", True, (179,205,224))
                 self.screen.blit(subText, subText.get_rect(center = (SCREEN_WIDTH/4, 135)))
-                subText = self.largefont.render("AI's card:", True, (179,205,224))
+                subText = self.font.render("Computer's card:", True, (179,205,224))
                 self.screen.blit(subText, subText.get_rect(center = (SCREEN_WIDTH*3/4, 135)))
                 subText = self.font.render((f"{len(self.playerCards)} Cards"), True, (179,205,224))
                 self.screen.blit(subText, subText.get_rect(center = (SCREEN_WIDTH/4, 350)))
                 subText = self.font.render((f"{len(self.computerCards)} Cards"), True, (179,205,224))
                 self.screen.blit(subText, subText.get_rect(center = (SCREEN_WIDTH*3/4, 350)))
-                self.playerCard.display()
                 
-                if self.turn % 2 == 0:
-                    self.computerCard.display(flipX = True, hideDetails = True)
-                    self.cardOptionsMenu.update(self.mouseButtonUp)
-                    self.mouseButtonUp = False
-                else:
-                    self.computerCard.display(flipX = True, hideDetails = False)
-                    self.timer -= self.deltaTime
-                    
-                    
-                    if self.timer <= 0:
-                        if len(self.computerCards) < 1:
-                            self.state = "PLAYERWIN"
-                            return
-                        
-                        elif len(self.playerCards) < 1:
-                            self.state = "COMPUTERWIN"
-                            return
-                        
-                        self.turn += 1
-                        self.playerCard = self.playerCards[0]
-                        self.computerCard = self.computerCards[0]
+                self.updateGame()
             
             case "PLAYERWIN":
                 titleText = self.largefont.render(f"Player wins after {self.turn} turns!", True, (255,255,255))
@@ -205,7 +191,88 @@ class MAIN:
                 self.screen.blit(titleText, titleText.get_rect(center = (SCREEN_WIDTH/2, 75)))
                 self.gameOverMenu.update(self.mouseButtonUp)
                 self.mouseButtonUp = False
+           
+    def updateGame(self):
+        self.playerCard.display() # player's top card should always be visible
+        
+        if self.playerTurn:
+            # player's turn
+            if self.playerChosen:
+                self.displayTitle("Comparing...")
+                self.computerCard.display(flipX = True, hideDetails = False)
+            else:
+                self.displayTitle("Choose a category")
+                self.computerCard.display(flipX = True, hideDetails = True)
+                self.cardOptionsMenu.update(self.mouseButtonUp)
+            
+            self.mouseButtonUp = False
+            
+            self.timer -= self.deltaTime
+            
+            if self.timer <= 0 and self.playerChosen:
+                if len(self.computerCards) < 1:
+                    self.state = "PLAYERWIN"
+                    self.turn += 1
+                    return
                 
+                
+                elif len(self.playerCards) < 1:
+                    self.state = "COMPUTERWIN"
+                    self.turn += 1
+                    return
+                
+                self.playerCard = self.playerCards[0]
+                self.computerCard = self.computerCards[0]
+                
+                self.turn += 1
+                if self.lastWinner == "ai":
+                    self.playerTurn = False
+                    self.computerTurn()
+                else:
+                    self.playerChosen = False
+                    self.timer = 10
+        else:
+            # computer's turn
+            self.displayTitle("Computer's turn")
+            self.computerCard.display(flipX = True, hideDetails = False)
+            self.timer -= self.deltaTime
+            
+            if len(self.playerCards) > 0:
+                self.playerCard = self.playerCards[0]
+                self.computerCard = self.computerCards[0]
+                
+            if self.timer <= 0:
+                if len(self.computerCards) < 1:
+                    self.state = "PLAYERWIN"
+                    self.turn += 1
+                    return
+                
+                elif len(self.playerCards) < 1:
+                    self.state = "COMPUTERWIN"
+                    self.turn += 1
+                    return
+                
+                if self.lastWinner == "plr":
+                    self.playerTurn = True
+                    self.playerChosen = False
+                else:
+                    self.timer = 10
+                    self.computerTurn()
+                
+                self.turn += 1
+                    
+            elif self.timer <= 10:
+                text = self.font.render(f"Computer has picked {self.computerChoice}", True, (255,255,255))
+                self.screen.blit(text, text.get_rect(center = (SCREEN_WIDTH/2, 400)))
+    
+    def computerTurn(self):
+        self.computerChoice = choice(["Friendliness", "Exercise", "Intelligence", "Drool"])
+        self.choose(self.computerChoice, False)
+    
+    def displayTitle(self, text):
+        titleText = self.largefont.render(text, True, (255,255,255))
+        self.screen.blit(titleText, titleText.get_rect(center = (SCREEN_WIDTH/2, 75)))
+    
     def generateCards(self): # generate random stats for each card and then distribute half to player and ai
         dogNames = []
         cards = []
@@ -243,16 +310,18 @@ class MAIN:
         self.playerCards.append(self.playerCard)
         self.computerCards.remove(self.computerCard)
         self.playerCards.remove(self.playerCard)
-        #print("playerwin")
+        self.lastWinner = "plr"
+        print("playerwin")
         
     def computerWin(self):
         self.computerCards.append(self.playerCard)
         self.playerCards.remove(self.playerCard)
         self.computerCards.append(self.computerCard)
         self.computerCards.remove(self.computerCard)
-        #print("computerwin")
+        self.lastWinner = "ai"
+        print("computerwin")
 
-    def choose(self, trait):
+    def choose(self, trait, plr=True):
         if trait == "Exercise":
             if self.playerCard.exercise >= self.computerCard.exercise:
                 self.playerWin()
@@ -277,7 +346,7 @@ class MAIN:
             else:
                 self.computerWin()
                     
-        self.turn += 1
+        self.playerChosen = plr
         self.timer = 1.5
         
     def eventLoop(self):
@@ -319,14 +388,14 @@ class MAIN:
     
     def mainLoop(self):
         while self.running:
-            self.screen.fill((3,57,108)) # clear the screen
+            self.screen.fill((3,57,108)) # clear the screen (fallback if image breaks while loading)
             self.screen.blit(self.backgroundImage)
             self.drawActiveState()
             
             self.eventLoop()
             pygame.display.flip() # update screen
 
-            self.deltaTime = self.clock.tick(FRAMERATE) / 1000 # use delta time for smoothness
+            self.deltaTime = self.clock.tick(FRAMERATE) / 1000 # use delta time for framerate independance
             self.deltaTime = max(0.001, min(0.1, self.deltaTime))
             
         self.closeGame()
