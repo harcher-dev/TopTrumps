@@ -124,6 +124,7 @@ class MAIN:
         self.playerCards = []
         self.computerCards = []
         self.awaitingInput = False
+        self.backgroundImage = pygame.image.load("gradient.png").convert()
         
         self.mainMenu = MENU(self.screen, self.font, Play = lambda: self.changeState("CARDINPUT"), Quit = self.closeGame)
         self.gameOverMenu = MENU(self.screen, self.font, Main_Menu = lambda: self.changeState("MAINMENU"), Play_Again = self.replayGame, Quit = self.closeGame)
@@ -142,6 +143,8 @@ class MAIN:
             case "MAINMENU":
                 titleText = self.largefont.render("Top Trumps", True, (255,255,255))
                 self.screen.blit(titleText, titleText.get_rect(center = (SCREEN_WIDTH/2, 150)))
+                subText = self.font.render("by Harry", True, (179,205,224))
+                self.screen.blit(subText, subText.get_rect(center = (SCREEN_WIDTH/2, 180)))
                 self.mainMenu.update(mouseUp=self.mouseButtonUp)
                 
             case "CARDINPUT":
@@ -149,8 +152,8 @@ class MAIN:
                 self.screen.blit(titleText, titleText.get_rect(center = (SCREEN_WIDTH/2, 150)))
                 subText = self.font.render("between 4 and 30 inclusive", True, (179,205,224))
                 self.screen.blit(subText, subText.get_rect(center = (SCREEN_WIDTH/2, 180)))
-                subText2 = self.font.render("_____", True, (179,205,224))
-                self.screen.blit(subText2, subText2.get_rect(center = (SCREEN_WIDTH/2, 270)))
+                subText = self.font.render("_____", True, (179,205,224))
+                self.screen.blit(subText, subText.get_rect(center = (SCREEN_WIDTH/2, 270)))
                 
                 self.awaitingInput = True
                 inputText = self.font.render(str(self.cardNum), True, (179,205,224))
@@ -317,6 +320,7 @@ class MAIN:
     def mainLoop(self):
         while self.running:
             self.screen.fill((3,57,108)) # clear the screen
+            self.screen.blit(self.backgroundImage)
             self.drawActiveState()
             
             self.eventLoop()
